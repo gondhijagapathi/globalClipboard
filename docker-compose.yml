@@ -1,0 +1,12 @@
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./uploads:/app/uploads
+      - ./globalClipboard.db:/app/globalClipboard.db
+    environment:
+      - API_KEY=${API_KEY:-my-secret-key}
+      - BASE_URL=http://localhost:3000
+    restart: unless-stopped
