@@ -34,7 +34,13 @@ if [ ! -f .env ]; then
     echo "BASE_URL=http://localhost:3000" >> .env
 fi
 
-# 5. Deploy
+# 5. Create Database File if missing (Fix for Docker volume issue)
+if [ ! -f globalClipboard.db ]; then
+    echo "📄 Creating empty database file..."
+    touch globalClipboard.db
+fi
+
+# 6. Deploy
 echo "🐳 Building and starting containers..."
 docker-compose up -d --build
 
