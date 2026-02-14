@@ -57,4 +57,4 @@ docker image prune -f
 echo "✅ App deployed successfully!"
 echo "📂 Location: $(pwd)"
 echo "   (Source files removed. Only data and config remain.)"
-echo "🚀 Access at http://<your-server-ip>:3000"
+echo "🚀 Access at http://<your-server-ip>:7777"

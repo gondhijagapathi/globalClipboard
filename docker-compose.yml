@@ -2,7 +2,7 @@ services:
   app:
     build: .
     ports:
-      - "3000:3000"
+      - "7777:3000"
     volumes:
       - ./uploads:/app/uploads
       - ./globalClipboard.db:/app/globalClipboard.db
