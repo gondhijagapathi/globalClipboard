@@ -6,7 +6,8 @@ services:
     volumes:
       - ./uploads:/app/uploads
       - ./globalClipboard.db:/app/globalClipboard.db
+    env_file:
+      - .env
     environment:
-      - API_KEY=${API_KEY:-my-secret-key}
-      - BASE_URL=http://localhost:3000
+      - NODE_ENV=production
     restart: unless-stopped
