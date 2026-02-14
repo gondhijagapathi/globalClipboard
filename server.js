@@ -263,7 +263,8 @@ if (fs.existsSync(frontendDist)) {
     app.use(express.static(frontendDist));
 
     // Handle React routing, return all requests to React app
-    app.get('*', (req, res) => {
+    // Express 5 regex matching to avoid "Missing parameter name" error with '*'
+    app.get(/.*/, (req, res) => {
         if (req.path.startsWith('/api')) {
             return res.status(404).json({ error: 'API endpoint not found' });
         }
