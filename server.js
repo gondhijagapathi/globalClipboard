@@ -257,13 +257,36 @@ app.get('/health', (req, res) => {
 });
 
 // Serve frontend static files
+// Serve frontend
 const frontendDist = path.join(__dirname, 'frontend/dist');
 if (fs.existsSync(frontendDist)) {
     app.use(express.static(frontendDist));
-    app.get(/(.*)/, (req, res) => {
-        if (!req.path.startsWith('/api')) {
-            res.sendFile(path.join(frontendDist, 'index.html'));
+
+    // Handle React routing, return all requests to React app
+    app.get('*', (req, res) => {
+        if (req.path.startsWith('/api')) {
+            return res.status(404).json({ error: 'API endpoint not found' });
         }
+
+        const indexPath = path.join(frontendDist, 'index.html');
+        // Check if index.html exists
+        if (!fs.existsSync(indexPath)) {
+            return res.status(404).send('Index file not found');
+        }
+
+        // Read and inject config
+        fs.readFile(indexPath, 'utf8', (err, data) => {
+            if (err) {
+                console.error('Error reading index.html:', err);
+                return res.status(500).send('Error loading frontend');
+            }
+
+            // Inject Runtime Configuration
+            const configScript = `<script>window.env = { API_KEY: "${API_KEY}", BASE_URL: "${process.env.BASE_URL || 'http://localhost:' + PORT}" };</script>`;
+            const result = data.replace('<!--__CONFIG__-->', configScript);
+
+            res.send(result);
+        });
     });
 } else {
     console.log("Frontend build not found. Run 'npm run build' in frontend/ to generate it.");

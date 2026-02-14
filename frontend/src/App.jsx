@@ -6,8 +6,8 @@ import { Upload, File, Type, Clock, Trash2, Copy, Download, RefreshCw } from "lu
 
 function App() {
   const [items, setItems] = useState([])
-  // Try API_KEY first (exposed via vite.config.js), then fallback to VITE_API_KEY
-  const [apiKey] = useState(import.meta.env.API_KEY || import.meta.env.VITE_API_KEY || '')
+  // Try window.env.API_KEY first (runtime injection), then build-time env vars
+  const [apiKey] = useState(window.env?.API_KEY || import.meta.env.API_KEY || import.meta.env.VITE_API_KEY || '')
   const [username, setUsername] = useState(localStorage.getItem('username') || '')
   const [text, setText] = useState('')
   const [file, setFile] = useState(null)
