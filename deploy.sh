@@ -38,9 +38,23 @@ fi
 echo "🐳 Building and starting containers..."
 docker-compose up -d --build
 
-# 6. Cleanup
+# 6. Cleanup Source Files (Transient Build)
+echo "🧹 Cleaning up source files..."
+# Remove everything except data, config, and deployment definition
+find . -maxdepth 1 \
+    ! -name '.' \
+    ! -name '..' \
+    ! -name 'uploads' \
+    ! -name 'globalClipboard.db' \
+    ! -name '.env' \
+    ! -name 'docker-compose.yml' \
+    ! -name 'deploy.sh' \
+    -exec rm -rf {} + 2>/dev/null
+
+# 7. Cleanup Docker images
 docker image prune -f
 
 echo "✅ App deployed successfully!"
 echo "📂 Location: $(pwd)"
-echo "� Access at http://<your-server-ip>:3000"
+echo "   (Source files removed. Only data and config remain.)"
+echo "🚀 Access at http://<your-server-ip>:3000"
