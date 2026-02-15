@@ -6,8 +6,6 @@ import { Upload, File, Type, Clock, Trash2, Copy, Download, RefreshCw } from "lu
 
 function App() {
   const [items, setItems] = useState([])
-  // Try window.env.API_KEY first (runtime injection), then build-time env vars
-  const [apiKey] = useState(window.env?.API_KEY || import.meta.env.API_KEY || import.meta.env.VITE_API_KEY || '')
   const [username, setUsername] = useState(localStorage.getItem('username') || '')
   const [text, setText] = useState('')
   const [file, setFile] = useState(null)
@@ -22,24 +20,19 @@ function App() {
   }, [username])
 
   useEffect(() => {
-    if (apiKey) {
-      fetchItems()
-      // Auto-refresh items
-      const interval = setInterval(() => {
-        fetchItems(true); // Fetch new items from server
-      }, 5000); // Check every 5 seconds
+    fetchItems()
+    // Auto-refresh items
+    const interval = setInterval(() => {
+      fetchItems(true); // Fetch new items from server
+    }, 5000); // Check every 5 seconds
 
-      return () => clearInterval(interval);
-    }
-  }, [apiKey])
+    return () => clearInterval(interval);
+  }, [])
 
   const fetchItems = async (isBackground = false) => {
-    if (!apiKey) return
     if (!isBackground) setLoading(true)
     try {
-      const res = await fetch('/api/list', {
-        headers: { 'x-api-key': apiKey }
-      })
+      const res = await fetch('/api/list')
       if (res.ok) {
         const data = await res.json()
         setItems(data)
@@ -55,7 +48,7 @@ function App() {
 
   const handleUpload = async (e) => {
     e.preventDefault()
-    if ((!text && !file) || !apiKey) return
+    if (!text && !file) return
 
     setUploading(true)
     const formData = new FormData()
@@ -67,9 +60,6 @@ function App() {
     try {
       const res = await fetch('/api/upload', {
         method: 'POST',
-        headers: {
-          'x-api-key': apiKey
-        },
         body: formData
       })
       if (res.ok) {
@@ -91,8 +81,7 @@ function App() {
     if (!confirm("Delete this item?")) return;
     try {
       const res = await fetch(`/api/delete/${id}`, {
-        method: 'DELETE',
-        headers: { 'x-api-key': apiKey }
+        method: 'DELETE'
       });
       if (res.ok) {
         fetchItems();

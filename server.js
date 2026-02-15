@@ -9,6 +9,7 @@ const rateLimit = require('express-rate-limit');
 const { v4: uuidv4 } = require('uuid');
 const sqlite3 = require('sqlite3').verbose();
 const cron = require('node-cron');
+const cookieParser = require('cookie-parser');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -109,6 +110,7 @@ app.use('/api/', limiter);
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
 
 // Storage setup for Multer
 const storage = multer.diskStorage({
@@ -128,7 +130,7 @@ const upload = multer({
 
 // Middleware: API Key Authentication
 const authenticateParams = (req, res, next) => {
-    const providedKey = req.headers['x-api-key'] || req.query.api_key;
+    const providedKey = req.headers['x-api-key'] || req.query.api_key || req.cookies.auth_token;
     if (providedKey && providedKey === API_KEY) {
         next();
     } else {
@@ -260,7 +262,7 @@ app.get('/health', (req, res) => {
 // Serve frontend
 const frontendDist = path.join(__dirname, 'frontend/dist');
 if (fs.existsSync(frontendDist)) {
-    app.use(express.static(frontendDist));
+    app.use(express.static(frontendDist, { index: false }));
 
     // Handle React routing, return all requests to React app
     // Express 5 regex matching to avoid "Missing parameter name" error with '*'
@@ -282,11 +284,16 @@ if (fs.existsSync(frontendDist)) {
                 return res.status(500).send('Error loading frontend');
             }
 
-            // Inject Runtime Configuration
-            const configScript = `<script>window.env = { API_KEY: "${API_KEY}", BASE_URL: "${process.env.BASE_URL || 'http://localhost:' + PORT}" };</script>`;
-            const result = data.replace('<!--__CONFIG__-->', configScript);
+            // Set Auth Cookie (HttpOnly)
+            // Valid for 7 days
+            res.cookie('auth_token', API_KEY, {
+                httpOnly: true,
+                sameSite: 'strict',
+                maxAge: 7 * 24 * 60 * 60 * 1000
+            });
 
-            res.send(result);
+            // Send raw index.html (no injection needed)
+            res.send(data);
         });
     });
 } else {
