@@ -8,7 +8,7 @@ function App() {
   const [items, setItems] = useState([])
   const [username, setUsername] = useState(localStorage.getItem('username') || '')
   const [text, setText] = useState('')
-  const [file, setFile] = useState(null)
+  const [files, setFiles] = useState([])
   const [expiry, setExpiry] = useState(60)
   const [loading, setLoading] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -48,11 +48,15 @@ function App() {
 
   const handleUpload = async (e) => {
     e.preventDefault()
-    if (!text && !file) return
+    if (!text && files.length === 0) return
 
     setUploading(true)
     const formData = new FormData()
-    if (file) formData.append('file', file)
+    if (files.length > 0) {
+      Array.from(files).forEach(file => {
+        formData.append('files', file)
+      })
+    }
     if (text) formData.append('text', text)
     formData.append('expiry', expiry)
     if (username) formData.append('username', username)
@@ -64,7 +68,7 @@ function App() {
       })
       if (res.ok) {
         setText('')
-        setFile(null)
+        setFiles([])
         setExpiry(60)
         fetchItems()
       } else {
@@ -116,7 +120,7 @@ function App() {
           />
         </div>
 
-        {/* Upload Section ... (no changes needed inside form other than it using 'username' state which is already handled in handleUpload) */}
+        {/* Upload Section */}
         <Card>
           <CardHeader>
             <CardTitle>Send Item</CardTitle>
@@ -127,29 +131,31 @@ function App() {
                 <div className="flex gap-2">
                   <Button
                     type="button"
-                    variant={file ? "outline" : "default"}
-                    onClick={() => { setFile(null); }}
+                    variant={files.length > 0 ? "outline" : "default"}
+                    onClick={() => { setFiles([]); }}
                     className="flex-1"
                   >
                     <Type className="mr-2 h-4 w-4" /> Text
                   </Button>
                   <Button
                     type="button"
-                    variant={file ? "default" : "outline"}
+                    variant={files.length > 0 ? "default" : "outline"}
                     onClick={() => { document.getElementById('file-upload').click() }}
                     className="flex-1"
                   >
-                    <File className="mr-2 h-4 w-4" /> {file ? file.name : "File"}
+                    <File className="mr-2 h-4 w-4" />
+                    {files.length > 0 && files[0] ? files[0].name : "File"}
                   </Button>
                   <input
                     id="file-upload"
                     type="file"
+                    multiple={true}
                     className="hidden"
-                    onChange={(e) => setFile(e.target.files[0])}
+                    onChange={(e) => setFiles(e.target.files)}
                   />
                 </div>
 
-                {!file && (
+                {files.length === 0 && (
                   <Input
                     placeholder="Paste text here..."
                     value={text}

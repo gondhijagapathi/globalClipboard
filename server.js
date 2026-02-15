@@ -141,19 +141,15 @@ const authenticateParams = (req, res, next) => {
 // --- Endpoints ---
 
 // Upload Endpoint
-app.post('/api/upload', upload.single('file'), authenticateParams, (req, res) => {
+// Upload Endpoint
+app.post('/api/upload', upload.array('files'), authenticateParams, (req, res) => {
     const { text, expiry, username } = req.body;
-    const file = req.file;
+    const files = req.files;
 
-    if (!file && !text) {
-        return res.status(400).json({ error: 'No file or text provided' });
+    if ((!files || files.length === 0) && !text) {
+        return res.status(400).json({ error: 'No files or text provided' });
     }
 
-    const id = uuidv4();
-    const type = file ? 'file' : 'text';
-    const content = file ? file.path : text; // File path or text content
-    const filename = file ? file.originalname : null;
-    const mimeType = file ? file.mimetype : 'text/plain';
     const createdAt = Date.now();
     let expiryMinutes = parseInt(expiry) || 60; // Default to 60 minutes
 
@@ -170,15 +166,59 @@ app.post('/api/upload', upload.single('file'), authenticateParams, (req, res) =>
     }
 
     const stmt = db.prepare(`INSERT INTO uploads (id, type, content, expiry, created_at, filename, mime_type, username) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`);
-    stmt.run(id, type, content, expiryTime, createdAt, filename, mimeType, uploaderName, function (err) {
-        if (err) {
-            console.error(err);
-            return res.status(500).json({ error: 'Database error' });
-        }
-        const downloadUrl = `${process.env.BASE_URL || 'http://localhost:3000'}/api/download/${id}`;
-        res.json({ id, url: downloadUrl, expiry: expiryTime });
-    });
-    stmt.finalize();
+
+    const uploadPromises = [];
+    const uploadedIds = [];
+
+    // Handle Files
+    if (files && files.length > 0) {
+        files.forEach(file => {
+            const id = uuidv4();
+            const type = 'file';
+            const content = file.path;
+            const filename = file.originalname;
+            const mimeType = file.mimetype;
+
+            uploadedIds.push(id);
+            uploadPromises.push(new Promise((resolve, reject) => {
+                stmt.run(id, type, content, expiryTime, createdAt, filename, mimeType, uploaderName, function (err) {
+                    if (err) reject(err);
+                    else resolve();
+                });
+            }));
+        });
+    }
+
+    // Handle Text (only if strictly text was sent, as user mentioned they don't mix)
+    // However, if text AND files are sent (even if UI prevents it), we can prioritize files or handle both.
+    // Given the user said "text and file wont come together", we can check if files are empty before handling text.
+    if ((!files || files.length === 0) && text) {
+        const id = uuidv4();
+        const type = 'text';
+        const content = text;
+        const filename = null;
+        const mimeType = 'text/plain';
+
+        uploadedIds.push(id);
+        uploadPromises.push(new Promise((resolve, reject) => {
+            stmt.run(id, type, content, expiryTime, createdAt, filename, mimeType, uploaderName, function (err) {
+                if (err) reject(err);
+                else resolve();
+            });
+        }));
+    }
+
+    Promise.all(uploadPromises)
+        .then(() => {
+            stmt.finalize();
+            // detailed response might not be needed by current frontend, but good for debugging
+            res.json({ message: 'Upload successful', count: uploadedIds.length, ids: uploadedIds });
+        })
+        .catch(err => {
+            stmt.finalize();
+            console.error("Database insert error:", err);
+            res.status(500).json({ error: 'Database error during upload' });
+        });
 });
 
 // List Active Items Endpoint
